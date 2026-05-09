@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
   const session = await getServerSession(authOptions);
   
   if (!session) {
@@ -11,49 +12,51 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   }
 
   const task = await prisma.task.findUnique({
-    where: { id: params.id },
-    include: { project: true }
+    where: { id: resolvedParams.id },
+    include: { project: { include: { members: true } }, assignee: true }
   });
 
   if (!task) {
     return NextResponse.json({ message: "Task not found" }, { status: 404 });
   }
 
-  // Admins, Project Owners, and the Assignee can update the task
-  if (
-    session.user.role !== "ADMIN" &&
-    task.project.ownerId !== session.user.id &&
-    task.assigneeId !== session.user.id
-  ) {
-    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
-  }
+  const { status, title, description, assigneeId, dueDate } = await req.json();
 
-  const body = await req.json();
-  const { title, description, status, dueDate, assigneeId } = body;
+  const isAssignee = task.assignee?.email === session.user.email;
+  const isOwner = task.project.ownerId === session.user.id || task.project.ownerId === session.user.email; 
+  const isAdmin = session.user.role === "ADMIN";
+  
+  // Permission logic
+  if (status && !title && !description && !assigneeId && !dueDate) {
+    // If only status is being updated (common case for members)
+    const canChangeStatus = isAssignee || (!task.assigneeId && (isAdmin || isOwner));
+    if (!canChangeStatus) {
+      return NextResponse.json({ message: "Forbidden: Status can only be changed by assignee once assigned" }, { status: 403 });
+    }
+  } else {
+    // If other details are being updated
+    if (!isAdmin && !isOwner) {
+      return NextResponse.json({ message: "Forbidden: Only Admins/Owners can edit task details" }, { status: 403 });
+    }
+  }
 
   const updateData: any = {};
+  if (status) updateData.status = status;
   if (title) updateData.title = title;
   if (description !== undefined) updateData.description = description;
-  if (status) updateData.status = status;
+  if (assigneeId !== undefined) updateData.assigneeId = assigneeId || null;
   if (dueDate !== undefined) updateData.dueDate = dueDate ? new Date(dueDate) : null;
-  
-  // Only admins or owners can reassign
-  if (assigneeId !== undefined) {
-    if (session.user.role !== "ADMIN" && task.project.ownerId !== session.user.id) {
-       return NextResponse.json({ message: "Only admins or project owners can reassign tasks" }, { status: 403 });
-    }
-    updateData.assigneeId = assigneeId;
-  }
 
   const updatedTask = await prisma.task.update({
-    where: { id: params.id },
+    where: { id: resolvedParams.id },
     data: updateData
   });
 
   return NextResponse.json(updatedTask);
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
   const session = await getServerSession(authOptions);
   
   if (!session) {
@@ -61,7 +64,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   }
 
   const task = await prisma.task.findUnique({
-    where: { id: params.id },
+    where: { id: resolvedParams.id },
     include: { project: true }
   });
 
@@ -74,7 +77,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   }
 
   await prisma.task.delete({
-    where: { id: params.id }
+    where: { id: resolvedParams.id }
   });
 
   return NextResponse.json({ message: "Task deleted" });

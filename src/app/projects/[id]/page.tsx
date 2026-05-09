@@ -27,6 +27,7 @@ interface Project {
   description: string;
   ownerId: string;
   tasks: Task[];
+  members: User[];
 }
 
 export default function ProjectDetails() {
@@ -39,10 +40,13 @@ export default function ProjectDetails() {
 
   // New task form state
   const [showCreate, setShowCreate] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
+
+  const [memberToAdd, setMemberToAdd] = useState("");
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -79,8 +83,11 @@ export default function ProjectDetails() {
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch(`/api/projects/${params.id}/tasks`, {
-      method: "POST",
+    const url = editingTask ? `/api/tasks/${editingTask.id}` : `/api/projects/${params.id}/tasks`;
+    const method = editingTask ? "PATCH" : "POST";
+
+    const res = await fetch(url, {
+      method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
         title, 
@@ -91,6 +98,7 @@ export default function ProjectDetails() {
     });
     if (res.ok) {
       setShowCreate(false);
+      setEditingTask(null);
       setTitle("");
       setDescription("");
       setDueDate("");
@@ -99,11 +107,40 @@ export default function ProjectDetails() {
     }
   };
 
+  const openEdit = (task: Task) => {
+    setEditingTask(task);
+    setTitle(task.title);
+    setDescription(task.description || "");
+    setDueDate(task.dueDate ? task.dueDate.split('T')[0] : "");
+    setAssigneeId(task.assigneeId || "");
+    setShowCreate(true);
+  };
+
   const handleUpdateStatus = async (taskId: string, newStatus: string) => {
     await fetch(`/api/tasks/${taskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: newStatus })
+    });
+    fetchProject();
+  };
+
+  const handleAssignMember = async () => {
+    if (!memberToAdd) return;
+    await fetch(`/api/projects/${params.id}/assign`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: memberToAdd })
+    });
+    setMemberToAdd("");
+    fetchProject();
+  };
+
+  const handleRemoveMember = async (userId: string) => {
+    await fetch(`/api/projects/${params.id}/assign`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId })
     });
     fetchProject();
   };
@@ -117,11 +154,53 @@ export default function ProjectDetails() {
   const isAdminOrOwner = session?.user.role === "ADMIN" || project.ownerId === session?.user.id;
 
   return (
-    <div>
-      <div className="mb-8">
+    <div className="flex flex-col gap-8">
+      <div className="bg-white p-6 shadow rounded-lg border border-gray-200">
         <h1 className="text-3xl font-bold text-gray-900">{project.name}</h1>
         <p className="mt-2 text-gray-600">{project.description}</p>
       </div>
+
+      {isAdminOrOwner && (
+        <div className="bg-white p-6 shadow rounded-lg border border-gray-200">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Project Members</h2>
+          <div className="flex gap-4 mb-4">
+            <select
+              value={memberToAdd}
+              onChange={(e) => setMemberToAdd(e.target.value)}
+              className="block w-full max-w-md rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2 bg-white"
+            >
+              <option value="">Select a member to add</option>
+              {users.filter(u => !project.members.some(m => m.id === u.id)).map(u => (
+                <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+              ))}
+            </select>
+            <button
+              onClick={handleAssignMember}
+              disabled={!memberToAdd}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 disabled:opacity-50"
+            >
+              Add Member
+            </button>
+          </div>
+          
+          <ul className="divide-y divide-gray-200">
+            {project.members.map(member => (
+              <li key={member.id} className="py-3 flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-900">{member.name} ({member.email})</span>
+                <button
+                  onClick={() => handleRemoveMember(member.id)}
+                  className="text-red-600 hover:text-red-800 text-sm"
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+            {project.members.length === 0 && (
+              <li className="py-3 text-sm text-gray-500">No members explicitly assigned.</li>
+            )}
+          </ul>
+        </div>
+      )}
 
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-gray-900">Tasks</h2>
@@ -137,6 +216,7 @@ export default function ProjectDetails() {
 
       {showCreate && (
         <div className="bg-white p-6 rounded-lg shadow mb-8 border border-gray-200">
+          <h2 className="text-xl font-bold mb-4">{editingTask ? 'Edit Task' : 'Add New Task'}</h2>
           <form onSubmit={handleCreateTask} className="space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
@@ -202,7 +282,11 @@ export default function ProjectDetails() {
       <div className="bg-white shadow overflow-hidden sm:rounded-md border border-gray-200">
         <ul className="divide-y divide-gray-200">
           {project.tasks.map((task) => {
-             const canEdit = isAdminOrOwner || task.assigneeId === session?.user.id;
+             const isAssignee = task.assignee?.email === session?.user?.email;
+             // Only assignee can change status of assigned tasks. 
+             // Admin/Owner can only change status if it's unassigned.
+             const canChangeStatus = isAssignee || (!task.assigneeId && isAdminOrOwner);
+             
              return (
               <li key={task.id} className="p-4 sm:px-6">
                 <div className="flex items-center justify-between">
@@ -213,6 +297,14 @@ export default function ProjectDetails() {
                       <span>Assigned to: {task.assignee?.name || 'Unassigned'}</span>
                       {task.dueDate && <span>Due: {format(new Date(task.dueDate), 'MMM d, yyyy')}</span>}
                     </div>
+                    {isAdminOrOwner && (
+                      <button
+                        onClick={() => openEdit(task)}
+                        className="mt-2 text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                      >
+                        Edit Details
+                      </button>
+                    )}
                   </div>
                   <div className="flex flex-col items-end space-y-2">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
@@ -222,7 +314,7 @@ export default function ProjectDetails() {
                       {task.status.replace('_', ' ')}
                     </span>
                     
-                    {canEdit && (
+                    {canChangeStatus && (
                       <select
                         value={task.status}
                         onChange={(e) => handleUpdateStatus(task.id, e.target.value)}

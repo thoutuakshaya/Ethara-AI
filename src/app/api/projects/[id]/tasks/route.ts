@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
   const session = await getServerSession(authOptions);
   
   if (!session) {
@@ -17,7 +18,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 
   const project = await prisma.project.findUnique({
-    where: { id: params.id }
+    where: { id: resolvedParams.id }
   });
 
   if (!project) {
@@ -34,7 +35,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       description,
       assigneeId,
       dueDate: dueDate ? new Date(dueDate) : null,
-      projectId: params.id,
+      projectId: resolvedParams.id,
     }
   });
 

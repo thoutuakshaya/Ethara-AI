@@ -14,11 +14,13 @@ export async function GET(req: Request) {
     where: session.user.role === "ADMIN" ? {} : {
       OR: [
         { ownerId: session.user.id },
-        { tasks: { some: { assigneeId: session.user.id } } }
+        { tasks: { some: { assigneeId: session.user.id } } },
+        { members: { some: { id: session.user.id } } }
       ]
     },
     include: {
       owner: { select: { name: true, email: true } },
+      members: { select: { id: true, name: true, email: true } },
       _count: { select: { tasks: true } }
     },
     orderBy: { createdAt: 'desc' }

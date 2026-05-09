@@ -10,15 +10,16 @@ export async function GET(req: Request) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const userId = session.user.id;
+  const userEmail = session.user.email;
   const isAdmin = session.user.role === "ADMIN";
 
   // Get tasks based on role
-  const tasksWhereClause = isAdmin ? {} : { assigneeId: userId };
+  const tasksWhereClause = isAdmin ? {} : { assignee: { email: userEmail } };
   const projectsWhereClause = isAdmin ? {} : {
     OR: [
-      { ownerId: userId },
-      { tasks: { some: { assigneeId: userId } } }
+      { owner: { email: userEmail } },
+      { tasks: { some: { assignee: { email: userEmail } } } },
+      { members: { some: { email: userEmail } } }
     ]
   };
 
