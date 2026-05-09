@@ -6,7 +6,7 @@ import { authOptions } from "@/lib/auth";
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const session = await getServerSession(authOptions);
-  
+
   if (!session) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
@@ -47,7 +47,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const session = await getServerSession(authOptions);
-  
+
   if (!session) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
@@ -71,7 +71,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   }
 
   const updatedProject = await prisma.project.update({
-    where: { id: params.id },
+    where: { id: resolvedParams.id },
     data: {
       members: {
         disconnect: { id: userId }
