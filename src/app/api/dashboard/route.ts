@@ -11,6 +11,9 @@ export async function GET(req: Request) {
   }
 
   const userEmail = session.user.email;
+  if (!userEmail) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
   const isAdmin = session.user.role === "ADMIN";
 
   // Get tasks based on role
