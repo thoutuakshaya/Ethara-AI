@@ -12,12 +12,14 @@ const registerSchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    // Get request body
     const body = await req.json();
 
+    // Validate input
     const { name, email, password, role } =
       registerSchema.parse(body);
 
-    // Check if user already exists
+    // Check existing user
     const existingUser = await prisma.user.findUnique({
       where: { email }
     });
@@ -35,7 +37,7 @@ export async function POST(req: Request) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create new user
     const newUser = await prisma.user.create({
       data: {
         name,
@@ -45,6 +47,7 @@ export async function POST(req: Request) {
       }
     });
 
+    // Success response
     return NextResponse.json(
       {
         user: {
@@ -62,6 +65,7 @@ export async function POST(req: Request) {
 
     console.error("REGISTER ERROR:", error);
 
+    // Zod validation errors
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         {
@@ -71,12 +75,10 @@ export async function POST(req: Request) {
       );
     }
 
+    // Show actual backend error
     return NextResponse.json(
       {
-        message:
-          error instanceof Error
-            ? error.message
-            : "Something went wrong"
+        message: String(error)
       },
       { status: 500 }
     );
