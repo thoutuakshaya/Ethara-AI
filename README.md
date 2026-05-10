@@ -1,68 +1,312 @@
 # Team Task Manager
 
-A full-stack web application built with Next.js, Prisma, and NextAuth.js. It allows users to create projects, assign tasks, and track progress with role-based access control (Admin/Member).
+A full-stack team collaboration and task management platform built using Next.js, Prisma ORM, and NextAuth.js.
 
-## Features
-- **Authentication**: Signup and Login functionality with credential validation (Bcrypt).
-- **Role-Based Access Control**:
-  - **Admins**: Can create projects, add tasks, reassign tasks, and manage project details.
-  - **Members**: Can view assigned projects, and update the status of their assigned tasks.
-- **Project Management**: Create, view, and manage projects.
-- **Task Management**: Create tasks, assign them to team members, set due dates, and update statuses (TODO, IN_PROGRESS, DONE).
-- **Dashboard**: Overview of tasks, progress tracking, and overdue task indicators.
-- **REST APIs**: Full RESTful structure via Next.js App Router API handlers.
+The application allows teams to manage projects, assign tasks, monitor progress, and collaborate efficiently with secure role-based access control.
 
-## Tech Stack
-- **Frontend**: Next.js 15 (React), Tailwind CSS, Lucide React
-- **Backend**: Next.js App Router API routes
-- **Database**: SQLite (local) / PostgreSQL (production), Prisma ORM
-- **Authentication**: NextAuth.js v4
+---
 
-## Local Development Setup
+# Features
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+## Authentication & Security
+- User Registration and Login
+- Secure password hashing using bcrypt
+- Session-based authentication with NextAuth.js
+- Protected routes and APIs
 
-2. **Set up environment variables:**
-   Ensure your `.env` file looks like this:
-   ```env
-   DATABASE_URL="file:./dev.db"
-   NEXTAUTH_SECRET="your-super-secret-key"
-   NEXTAUTH_URL="http://localhost:3000"
-   ```
+---
 
-3. **Initialize the database:**
-   ```bash
-   npx prisma db push
-   ```
+## Role-Based Access Control
 
-4. **Run the development server:**
-   ```bash
-   npm run dev
-   ```
+### Admin
+- Create and manage projects
+- Add team members
+- Create and assign tasks
+- Update project details
+- Reassign tasks between members
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+### Member
+- View assigned projects
+- View assigned tasks
+- Update task status
+- Track project progress
 
-## Deployment on Railway
+---
 
-This app is ready to be deployed to [Railway](https://railway.app/).
+# Project Management
+- Create multiple projects
+- Add project descriptions
+- Assign project owners
+- Track project timelines
 
-1. Push your code to a GitHub repository.
-2. In Railway, create a new project and select "Deploy from GitHub repo".
-3. Add a PostgreSQL database service in Railway.
-4. **Important Schema Change**: In `prisma/schema.prisma`, change the provider from `"sqlite"` to `"postgresql"`.
-5. Connect your repository to Railway.
-6. Under your Next.js service variables, add:
-   - `DATABASE_URL` (Reference it from the PostgreSQL service)
-   - `NEXTAUTH_SECRET` (A secure random string)
-   - `NEXTAUTH_URL` (Your Railway app domain, e.g., `https://your-app.up.railway.app`)
-7. Add a deploy command to automatically migrate your database schema on deploy by modifying the `build` script in `package.json`:
-   ```json
-   "build": "npx prisma generate && npx prisma db push && next build"
-   ```
-8. Deploy! The app will automatically build and start.
+---
 
-## Demo Video
-*(Please record your 2-5 min demo video showcasing signup, admin project creation, task assignment, and member task status updating, then link it here)*
+# Task Management
+- Create tasks with:
+  - Title
+  - Description
+  - Due Date
+  - Status
+- Task statuses:
+  - TODO
+  - IN_PROGRESS
+  - DONE
+- Assign tasks to members
+
+---
+
+# Dashboard
+- Task overview
+- Progress tracking
+- Pending and completed tasks
+- Overdue task indicators
+
+---
+
+# Tech Stack
+
+## Frontend
+- Next.js
+- React
+- Tailwind CSS
+- Lucide React
+
+## Backend
+- Next.js App Router APIs
+- REST API architecture
+
+## Database
+- PostgreSQL
+- Prisma ORM
+
+## Authentication
+- NextAuth.js
+
+## Deployment
+- Railway
+
+---
+
+# Local Development Setup
+
+## 1. Clone Repository
+
+```bash
+git clone <your-repository-url>
+cd team-task-manager
+```
+
+---
+
+## 2. Install Dependencies
+
+```bash
+npm install
+```
+
+---
+
+## 3. Configure Environment Variables
+
+Create a `.env` file in the root folder.
+
+```env
+DATABASE_URL="postgresql://postgres:password@localhost:5432/teamtaskdb"
+
+NEXTAUTH_SECRET="your_secret_key"
+
+NEXTAUTH_URL="http://localhost:3000"
+```
+
+---
+
+## 4. Prisma Database Setup
+
+Run the following command:
+
+```bash
+npx prisma db push
+```
+
+Generate Prisma client:
+
+```bash
+npx prisma generate
+```
+
+(Optional) Open Prisma Studio:
+
+```bash
+npx prisma studio
+```
+
+---
+
+## 5. Run Development Server
+
+```bash
+npm run dev
+```
+
+Application runs at:
+
+```bash
+http://localhost:3000
+```
+
+---
+
+# Railway Deployment Guide
+
+## Step 1 — Push Code to GitHub
+
+Push your project to a GitHub repository.
+
+---
+
+## Step 2 — Create Railway Project
+
+Open:
+https://railway.app/dashboard
+
+Create:
+- New Project
+- Deploy from GitHub Repo
+
+---
+
+## Step 3 — Add PostgreSQL Service
+
+Inside Railway:
+- Click **New**
+- Add **PostgreSQL**
+
+Railway automatically creates database credentials.
+
+---
+
+## Step 4 — Configure Variables
+
+Inside your Next.js Railway service → Variables:
+
+Add:
+
+```env
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+
+NEXTAUTH_SECRET=your_random_secret
+
+NEXTAUTH_URL=https://your-app.up.railway.app
+```
+
+Important:
+- Use Railway's internal Postgres reference
+- Do NOT use public proxy URLs for production
+
+---
+
+## Step 5 — Update package.json Build Script
+
+```json
+"build": "prisma generate && prisma db push && next build"
+```
+
+---
+
+## Step 6 — Deploy
+
+Railway automatically:
+- installs dependencies
+- pushes Prisma schema
+- builds app
+- deploys application
+
+---
+
+# Common Errors & Fixes
+
+## Prisma P1001 Error
+
+### Error
+```bash
+Can't reach database server
+```
+
+### Fix
+Use Railway internal database URL:
+
+```env
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+```
+
+instead of:
+
+```env
+viaduct.proxy.rlwy.net
+```
+
+---
+
+## API Returning 500 Error
+
+Usually caused by:
+- Invalid DATABASE_URL
+- Prisma client not generated
+- Database not connected
+
+Run:
+
+```bash
+npx prisma generate
+npx prisma db push
+```
+
+Then redeploy Railway.
+
+---
+
+# Folder Structure
+
+```bash
+app/
+ ├── api/
+ ├── dashboard/
+ ├── login/
+ ├── register/
+
+lib/
+ ├── prisma.ts
+
+prisma/
+ ├── schema.prisma
+```
+
+---
+
+# Future Improvements
+- Real-time notifications
+- File uploads
+- Team chat system
+- Activity logs
+- Email notifications
+- Kanban board
+- Dark mode
+- Analytics dashboard
+
+---
+
+# Demo Video
+
+Add your project demo video link here.
+
+Example:
+
+```md
+https://youtu.be/your-demo-link
+```
+
+---
+
+# Author
+
+Developed by Thoutu Akshaya.
