@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
+import { Clock, Layout, BarChart3, Users, Target, ArrowRight } from "lucide-react";
 
 interface User {
   id: string;

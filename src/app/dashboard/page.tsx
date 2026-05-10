@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ClipboardList, CheckCircle2, Clock, AlertCircle, FolderKanban } from "lucide-react";
+import { ClipboardList, CheckCircle2, Clock, AlertCircle, FolderKanban, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 interface DashboardStats {
@@ -142,4 +142,3 @@ function StatRow({ label, val, total, color }: { label: string, val: number, tot
   );
 }
 
-import { ArrowRight } from "lucide-react";
