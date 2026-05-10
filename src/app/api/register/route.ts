@@ -12,16 +12,19 @@ const registerSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    // Get request body
+
+    // Parse request body
     const body = await req.json();
 
     // Validate input
     const { name, email, password, role } =
       registerSchema.parse(body);
 
-    // Check existing user
+    // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email }
+      where: {
+        email
+      }
     });
 
     if (existingUser) {
@@ -30,14 +33,16 @@ export async function POST(req: Request) {
           user: null,
           message: "User with this email already exists"
         },
-        { status: 409 }
+        {
+          status: 409
+        }
       );
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create new user
+    // Create user
     const newUser = await prisma.user.create({
       data: {
         name,
@@ -58,29 +63,38 @@ export async function POST(req: Request) {
         },
         message: "User created successfully"
       },
-      { status: 201 }
+      {
+        status: 201
+      }
     );
 
   } catch (error) {
 
     console.error("REGISTER ERROR:", error);
 
-    // Zod validation errors
+    // Validation errors
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         {
           message: error.issues[0].message
         },
-        { status: 400 }
+        {
+          status: 400
+        }
       );
     }
 
-    // Show actual backend error
+    // Show real backend/database error
     return NextResponse.json(
       {
-        message: String(error)
+        message:
+          error instanceof Error
+            ? error.message
+            : String(error)
       },
-      { status: 500 }
+      {
+        status: 500
+      }
     );
   }
 }
