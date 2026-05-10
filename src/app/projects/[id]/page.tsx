@@ -279,61 +279,96 @@ export default function ProjectDetails() {
         </div>
       )}
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-md border border-gray-200">
-        <ul className="divide-y divide-gray-200">
-          {project.tasks.map((task) => {
-             const isAssignee = task.assignee?.email === session?.user?.email;
-             // Only assignee can change status of assigned tasks. 
-             // Admin/Owner can only change status if it's unassigned.
-             const canChangeStatus = isAssignee || (!task.assigneeId && isAdminOrOwner);
-             
-             return (
-              <li key={task.id} className="p-4 sm:px-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0 pr-4">
-                    <p className="text-sm font-medium text-indigo-600 truncate">{task.title}</p>
-                    <p className="mt-1 text-sm text-gray-500">{task.description}</p>
-                    <div className="mt-2 flex text-xs text-gray-500 space-x-4">
-                      <span>Assigned to: {task.assignee?.name || 'Unassigned'}</span>
-                      {task.dueDate && <span>Due: {format(new Date(task.dueDate), 'MMM d, yyyy')}</span>}
-                    </div>
-                    {isAdminOrOwner && (
-                      <button
-                        onClick={() => openEdit(task)}
-                        className="mt-2 text-xs text-indigo-600 hover:text-indigo-800 font-medium"
-                      >
-                        Edit Details
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex flex-col items-end space-y-2">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                      ${task.status === 'DONE' ? 'bg-green-100 text-green-800' : 
-                        task.status === 'IN_PROGRESS' ? 'bg-yellow-100 text-yellow-800' : 
-                        'bg-gray-100 text-gray-800'}`}>
-                      {task.status.replace('_', ' ')}
-                    </span>
-                    
-                    {canChangeStatus && (
-                      <select
-                        value={task.status}
-                        onChange={(e) => handleUpdateStatus(task.id, e.target.value)}
-                        className="text-xs border-gray-300 rounded-md p-1 border"
-                      >
-                        <option value="TODO">To Do</option>
-                        <option value="IN_PROGRESS">In Progress</option>
-                        <option value="DONE">Done</option>
-                      </select>
-                    )}
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-          {project.tasks.length === 0 && (
-            <li className="p-4 text-center text-gray-500">No tasks found.</li>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* TODO Column */}
+        <div className="kanban-column">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-black uppercase tracking-widest text-slate-500">To Do</h3>
+            <span className="bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
+              {project.tasks.filter(t => t.status === 'TODO').length}
+            </span>
+          </div>
+          {project.tasks.filter(t => t.status === 'TODO').map(task => (
+            <KanbanCard key={task.id} task={task} isAdmin={isAdminOrOwner} onEdit={openEdit} onStatusChange={handleUpdateStatus} session={session} />
+          ))}
+        </div>
+
+        {/* IN PROGRESS Column */}
+        <div className="kanban-column">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-black uppercase tracking-widest text-amber-500">In Progress</h3>
+            <span className="bg-amber-100 dark:bg-amber-500/10 text-amber-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
+              {project.tasks.filter(t => t.status === 'IN_PROGRESS').length}
+            </span>
+          </div>
+          {project.tasks.filter(t => t.status === 'IN_PROGRESS').map(task => (
+            <KanbanCard key={task.id} task={task} isAdmin={isAdminOrOwner} onEdit={openEdit} onStatusChange={handleUpdateStatus} session={session} />
+          ))}
+        </div>
+
+        {/* DONE Column */}
+        <div className="kanban-column">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-black uppercase tracking-widest text-emerald-500">Done</h3>
+            <span className="bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
+              {project.tasks.filter(t => t.status === 'DONE').length}
+            </span>
+          </div>
+          {project.tasks.filter(t => t.status === 'DONE').map(task => (
+            <KanbanCard key={task.id} task={task} isAdmin={isAdminOrOwner} onEdit={openEdit} onStatusChange={handleUpdateStatus} session={session} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function KanbanCard({ task, isAdmin, onEdit, onStatusChange, session }: { task: Task, isAdmin: boolean, onEdit: (t: Task) => void, onStatusChange: (id: string, s: string) => void, session: any }) {
+  const isAssignee = task.assignee?.email === session?.user?.email;
+  const canChangeStatus = isAssignee || (!task.assigneeId && isAdmin);
+
+  return (
+    <div className="kanban-card group">
+      <div className="flex justify-between items-start mb-2">
+        <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 transition-colors">
+          {task.title}
+        </h4>
+        {isAdmin && (
+          <button onClick={() => onEdit(task)} className="text-slate-400 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-all">
+            <Clock className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 line-clamp-2">
+        {task.description}
+      </p>
+      <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-100 dark:border-slate-700/50">
+        <div className="flex -space-x-2">
+          {task.assignee ? (
+            <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/50 border-2 border-white dark:border-slate-800 flex items-center justify-center text-[10px] font-bold text-indigo-600" title={task.assignee.name}>
+              {task.assignee.name.charAt(0)}
+            </div>
+          ) : (
+            <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-400">
+              ?
+            </div>
           )}
-        </ul>
+        </div>
+        {canChangeStatus ? (
+          <select
+            value={task.status}
+            onChange={(e) => onStatusChange(task.id, e.target.value)}
+            className="text-[10px] font-bold bg-slate-50 dark:bg-slate-900 border-none rounded-lg p-1 cursor-pointer focus:ring-0"
+          >
+            <option value="TODO">To Do</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="DONE">Done</option>
+          </select>
+        ) : (
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+            {task.status.replace('_', ' ')}
+          </span>
+        )}
       </div>
     </div>
   );
