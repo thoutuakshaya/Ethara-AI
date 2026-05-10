@@ -13,21 +13,29 @@ const registerSchema = z.object({
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, email, password, role } = registerSchema.parse(body);
 
+    const { name, email, password, role } =
+      registerSchema.parse(body);
+
+    // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email }
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { user: null, message: "User with this email already exists" },
+        {
+          user: null,
+          message: "User with this email already exists"
+        },
         { status: 409 }
       );
     }
 
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Create user
     const newUser = await prisma.user.create({
       data: {
         name,
@@ -38,15 +46,38 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(
-      { user: { id: newUser.id, email: newUser.email, name: newUser.name }, message: "User created successfully" },
+      {
+        user: {
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role
+        },
+        message: "User created successfully"
+      },
       { status: 201 }
     );
+
   } catch (error) {
+
+    console.error("REGISTER ERROR:", error);
+
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ message: error.issues[0].message }, { status: 400 });
+      return NextResponse.json(
+        {
+          message: error.issues[0].message
+        },
+        { status: 400 }
+      );
     }
+
     return NextResponse.json(
-      { message: "Something went wrong" },
+      {
+        message:
+          error instanceof Error
+            ? error.message
+            : "Something went wrong"
+      },
       { status: 500 }
     );
   }
